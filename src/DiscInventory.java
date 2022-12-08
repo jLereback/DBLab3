@@ -1,27 +1,18 @@
 
-import java.awt.*;
 import java.sql.*;
 import java.util.Scanner;
 
 public class DiscInventory {
-	static Scanner sc;
-
+	static Scanner sc = new Scanner(System.in);
+	static String URL = "jdbc:sqlite:C:/Users/julia/DataGripProjects/Database/JDBC/jdbc.db";
 	static String PRINT_CATEGORIES = "SELECT * FROM Category ORDER BY categoryID";
 	static String PRINT_PRODUCTS = "SELECT * FROM Disc ORDER BY categoryID";
-
-	String sql = "DELETE FROM bok WHERE bokId = ?";
-	String sql1 = "UPDATE bok SET bokForfattare = ? , "
-			+ "bokTitel = ? , "
-			+ "bokPris = ? "
-			+ "WHERE bokId = ?";
-	String sql2 = "INSERT INTO bok(bokTitel, bokForfattare, bokPris) VALUES(?,?,?)";
-	String sql3 = "SELECT * FROM bok WHERE bokForfattare = ? ";
-	String sql4 = "SELECT * FROM bok";
-
+	static String DELETE_PRODUCT= "DELETE FROM Disc WHERE discName = ?";
+	static String EDIT_PRODUCT= "UPDATE Disc SET discPrice = ?";
+	static String ADD_PRODUCT= "INSERT INTO Disc(discName, discCategoryID, discPrice) VALUES(?,?,?)";
+	static String PRINT_PRODUCT_IN_CATEGORY= "SELECT * FROM Disc WHERE discCategory = ? ";
 
 	public static void main(String[] args) {
-		sc = new Scanner(System.in);
-
 		String choice;
 		do {
 			printActions();
@@ -35,7 +26,7 @@ public class DiscInventory {
 			case "1" -> printCategories();
 			case "2" -> printProducts();
 			case "3" -> addNewProduct();
-			case "4" -> editProduct("Bilbo", "Tolkien, J.R.R", 100, 1);
+			case "4" -> editProduct();
 			case "5" -> deleteProduct();
 			case "6" -> search();
 			case "e" -> quitMessage();
@@ -44,7 +35,6 @@ public class DiscInventory {
 	}
 
 	private static void printCategories() {
-
 		try (ResultSet rs = getResultSet(PRINT_CATEGORIES)) {
 			while (rs.next()) {
 				System.out.println(rs.getString("categoryName"));
@@ -58,22 +48,18 @@ public class DiscInventory {
 		try (ResultSet rs = getResultSet(PRINT_PRODUCTS)) {
 			while (rs.next()) {
 				System.out.println(
-						rs.getInt("bokId") +
-								rs.getString("bokTitel") +
-								rs.getString("bokForfattare") +
-								rs.getString("bokPris"));
+						rs.getInt("discName") +
+						rs.getString("discCategoryID") +
+						rs.getString("discPrice"));
 			}
-
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
 	}
 	private static Connection connect() {
-		// SQLite connection string
-		String url = "jdbc:sqlite:C:/Users/julia/DataGripProjects/Database/JDBC/jdbc.db";
 		Connection connection = null;
 		try {
-			connection = DriverManager.getConnection(url);
+			connection = DriverManager.getConnection(URL);
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
@@ -95,42 +81,21 @@ public class DiscInventory {
 				""");
 	}
 
-	// Metod för användarens inmatningar (som en controller)
 	private static void addNewProduct() {
-		System.out.println("Skriv in titel på boken: ");
-		String inputTitel = sc.nextLine();
-		System.out.println("Skriv in författare på boken: ");
-		String inputForfattare = sc.nextLine();
-		System.out.println("Skriv in pris på boken: ");
-		int inputPris = sc.nextInt();
-		insert(inputTitel, inputForfattare, inputPris);
-		sc.nextLine();
+		System.out.println("Insert name of the disc:");
+		String inputDiscName = sc.nextLine();
+		System.out.println("Fill in categoryID:");
+		printCategories();
+		String inputCategoryID = sc.nextLine();
+		System.out.println("Fill in price:");
+		int inputPrice = Integer.parseInt(sc.nextLine());
+		insert(inputDiscName, inputCategoryID, inputPrice);
 	}
 
 	private static void deleteProduct() {
-		System.out.println("Skriv in id:t på boken som ska tas bort: ");
-		int inputId = sc.nextInt();
-		delete(inputId);
-		sc.nextLine();
-	}
-
-	private static void printBok() {
-		String sql = "SELECT * FROM bok";
-
-		try (ResultSet rs = getResultSet(sql)) {
-
-			// loop through the result set
-			while (rs.next()) {
-				System.out.println(
-						rs.getInt("bokId") +
-								rs.getString("bokTitel") +
-								rs.getString("bokForfattare") +
-								rs.getString("bokPris"));
-			}
-
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
-		}
+		System.out.println("Which disc would you like to remove? (Insert name): ");
+		String discName = sc.nextLine();
+		delete(discName);
 	}
 
 	private static ResultSet getResultSet(String sql) throws SQLException {
@@ -138,92 +103,66 @@ public class DiscInventory {
 	}
 
 	private static void search() {
-		String sql = "SELECT * FROM bok WHERE bokForfattare = ? ";
-
-		try (PreparedStatement pstmt = getPstmt(sql)) {
-
-			String inputForfattare = "Astrid Lindgren";
-
-			// set the value
-			pstmt.setString(1, inputForfattare);
-			//
-			ResultSet rs = pstmt.executeQuery();
+		try (PreparedStatement ps = getPrepStmt(PRINT_PRODUCT_IN_CATEGORY)) {
+			ps.setString(1, sc.nextLine());
+			ResultSet rs = ps.executeQuery();
 
 			// loop through the result set
 			while (rs.next()) {
-				System.out.println(rs.getInt("bokId") + "\t" +
-						rs.getString("bokTitel") + "\t" +
-						rs.getString("bokForfattare") + "\t" +
-						rs.getString("bokPris"));
+				System.out.println(rs.getInt("discID") +
+						rs.getString("discName") +
+						rs.getString("discCategory") +
+						rs.getString("discPrice"));
 			}
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
 	}
 
-	private static PreparedStatement getPstmt(String sql) throws SQLException {
+	private static PreparedStatement getPrepStmt(String sql) throws SQLException {
 		return connect().prepareStatement(sql);
 	}
 
-	// Metod för insert i bok-tabellen mot databasen
-	private static void insert(String titel, String forfattare, int pris) {
-		String sql = "INSERT INTO bok(bokTitel, bokForfattare, bokPris) VALUES(?,?,?)";
-
-		try (PreparedStatement pstmt = connect().prepareStatement(sql)) {
-			pstmt.setString(1, titel);
-			pstmt.setString(2, forfattare);
-			pstmt.setInt(3, pris);
-			pstmt.executeUpdate();
-			System.out.println("Du har lagt till en ny bok");
+	private static void insert(String discName, String categoryID, int price) {
+		try (PreparedStatement ps = getPrepStmt(ADD_PRODUCT)) {
+			ps.setString(1, discName);
+			ps.setString(2, categoryID);
+			ps.setInt(3, price);
+			ps.executeUpdate();
+			System.out.println("You added a new Disc");
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
 	}
 
-	// Update mot bok-tabellen i databasen
-	private static void editProduct(String forfattare, String titel, int pris, int id) {
-		String sql = "UPDATE bok SET bokForfattare = ? , "
-				+ "bokTitel = ? , "
-				+ "bokPris = ? "
-				+ "WHERE bokId = ?";
+	private static void editProduct() {
+		System.out.println("Which disc would you like to remove? (Insert name):");
+		String discName = sc.nextLine();
+		edit(discName);
+	}
 
-		try {
-			Connection conn = connect();
-			PreparedStatement prepStatement = conn.prepareStatement(sql);
-
-			// set the corresponding param
-			prepStatement.setString(1, titel);
-			prepStatement.setString(2, forfattare);
-			prepStatement.setInt(3, pris);
-			prepStatement.setInt(4, id);
-			// update
-			prepStatement.executeUpdate();
-			System.out.println("Du har uppdaterat vald bok");
+	private static void edit(String discName) {
+		try (PreparedStatement ps = getPrepStmt(EDIT_PRODUCT)) {
+			ps.setString(1, discName);
+			ps.executeUpdate();
+			System.out.println("The product is edited");
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
 	}
 
-	// Delete mot bok-tabellen i databasen
+	private static void delete(String discName) {
+		try (PreparedStatement ps = getPrepStmt(DELETE_PRODUCT)) {
+			ps.setString(1, discName);
+			ps.executeUpdate();
+			System.out.println("The disc is deleted");
+		} catch (SQLException e) {
+			System.out.println(e.getMessage());
+		}
+	}
+
 	private static void quitMessage() {
 		System.out.println("Welcome back");
-	}
-
-	private static void delete(int id) {
-		String sql = "DELETE FROM bok WHERE bokId = ?";
-
-		try {
-			Connection conn = connect();
-			PreparedStatement pstmt = conn.prepareStatement(sql);
-
-			// set the corresponding param
-			pstmt.setInt(1, id);
-			// execute the delete statement
-			pstmt.executeUpdate();
-			System.out.println("Du har tagit bort boken");
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
-		}
 	}
 
 }

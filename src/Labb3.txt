@@ -4,7 +4,7 @@ CREATE DATABASE Lab3;
 
 CREATE TABLE Category
 (
-    categoryID   INT NOT NULL AUTO_INCREMENT,
+    categoryID   INTEGER PRIMARY KEY,
     categoryName VARCHAR(20),
     PRIMARY KEY (categoryID)
 );
