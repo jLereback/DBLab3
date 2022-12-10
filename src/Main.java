@@ -2,9 +2,9 @@
 import java.sql.*;
 import java.util.Scanner;
 
-public class DiscInventory {
+public class Main {
     static Scanner sc = new Scanner(System.in);
-    static String URL = "jdbc:sqlite:/home/julia/ITHS/Database/JDBC/Lab3.db";
+    static String URL = "jdbc:sqlite:src/Lab3.db";
     static String PRINT_CATEGORIES = """
             SELECT * FROM Category
             ORDER BY categoryID""";
